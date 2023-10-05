@@ -1,6 +1,22 @@
 use crate::*;
 use std::*;
 
+pub fn file_try_lock(
+    lock_p: &path::Path,
+    content_if_created: &[u8],
+) -> io::Result<Option<fs::File>> {
+    use fs2::*;
+    if !lock_p.try_exists()? {
+        fs::write(lock_p, content_if_created)?;
+    }
+    //both windows and unix allow 2 processes File::open simultaneously
+    let fobj = fs::File::open(lock_p)?;
+    if fobj.try_lock_exclusive().is_ok() {
+        Ok(Some(fobj))
+    } else {
+        Ok(None)
+    }
+}
 pub fn file_lock(lock_p: &path::Path, content_if_created: &[u8]) -> CustRes<fs::File> {
     use fs2::*;
     if !lock_p.try_exists()? {
